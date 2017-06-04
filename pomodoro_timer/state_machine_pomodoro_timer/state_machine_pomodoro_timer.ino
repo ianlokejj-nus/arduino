@@ -21,6 +21,9 @@ uint16_t cycle_time;
 uint8_t current_pixel = 0;
 uint8_t colour_counter = 0;
 uint16_t pixel_freq_concentration = CONCENTRATION_DURATION / PIXELS;
+uint16_t pause_duration = 0;
+uint16_t start_pause_time = 0;
+uint16_t end_pause_time = 0;
 
 void setup(){
   Serial.begin(9600);
@@ -33,6 +36,8 @@ void setup(){
   state = START;
   start_time = millis();
   paused = false;
+  colorWipe(strip.Color(255, 0, 0), 50);
+  
   Serial.println("In Start State");
 }
 
@@ -43,7 +48,7 @@ void loop(){
      state=CONCENTRATE;
      start_time = current_time = millis();
      cycle_time = 0;
-     colorWipe(strip.Color(255, 0, 0), 50);
+     pause_duration = 0;
      Serial.println("Proceeding to Concentrate");
      Serial.println("Start time:");
      Serial.println(start_time);
@@ -55,13 +60,23 @@ void loop(){
     if (digitalRead(START_BUTTON)==LOW){
       Serial.println("Pause Button Pressed");
       paused = !paused;
-      delay(BUTTON_DELAY); 
+      
+      
+      if(paused){
+        // get the start of the pause time
+         start_pause_time = millis();
+      } else {
+        // Unpausing
+        end_pause_time = millis()
+        pause_duration = end_pause_time - start_pause_time;
+      }
+      delay(BUTTON_DELAY);
     }
     if (!paused){
-      if(current_time < start_time + CONCENTRATION_DURATION + BUTTON_DELAY + 1000){ // The additional 1 sec is added to allow the last pixel to light up 
+      if(current_time < start_time + CONCENTRATION_DURATION + BUTTON_DELAY + pause_duration + 1000){ // The additional 1 sec is added to allow the last pixel to light up 
         current_time = millis();
-        Serial.println("current_time");
-        Serial.println(current_time);
+        //Serial.println("current_time");
+        //Serial.println(current_time);
         
         //Update pixel status
        if (current_time - cycle_time > pixel_freq_concentration){
@@ -74,7 +89,7 @@ void loop(){
          state=CONCENTRATE_OVER;
          current_time = millis();
          start_time = millis();
-        Serial.println("Time's up, Time to Rest"); 
+        Serial.println("Time's up, Time to Rest");
       }
     }
   } else if (state==CONCENTRATE_OVER){
