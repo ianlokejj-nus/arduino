@@ -25,6 +25,7 @@ uint32_t pixel_freq_rest = REST_DURATION / PIXELS;
 unsigned long pause_duration = 0;
 unsigned long start_pause_time = 0;
 unsigned long end_pause_time = 0;
+unsigned long rainbow_counter = 0;
 
 void setup(){
   Serial.begin(9600);
@@ -32,19 +33,35 @@ void setup(){
   
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
-  strip.setBrightness(1);  
+  strip.setBrightness(5);  
   
   state = START;
   start_time = millis();
   paused = false;
-  colorWipe(strip.Color(255, 0, 0), 50);
   
   Serial.println("In Start State");
+}
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  if(WheelPos < 170) {
+    WheelPos -= 85;
+    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+  WheelPos -= 170;
+  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
 
 void loop(){
   
   if (state==START){
+   
+   
    if (digitalRead(START_BUTTON)==LOW){
      colorWipe(strip.Color(255, 255, 0), 50);
      state=CONCENTRATE;
@@ -60,7 +77,16 @@ void loop(){
      Serial.println("pixel_freq_concentration");
      Serial.println(pixel_freq_concentration);
      delay(BUTTON_DELAY);
+   } else {
+     // annoy me at the start
+      for(int i=0; i< strip.numPixels(); i++) {
+          strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + rainbow_counter) & 255));
+      }
+      rainbow_counter++;
+      strip.show();
+      delay(20);
    }
+   
   } else if (state==CONCENTRATE){
     if (digitalRead(START_BUTTON)==LOW){
       Serial.println("Pause Button Pressed");
@@ -93,8 +119,6 @@ void loop(){
       } else {
         Serial.println("Time's up, Time to Rest");
           state=CONCENTRATE_OVER;
-          // Play some nice visuals... This is where I want to wind down my work
-          colorWipe(strip.Color(255, 255, 255), 50);
           delay(BUTTON_DELAY);
       }
     }
@@ -107,6 +131,14 @@ void loop(){
        current_time = millis();
        start_time = millis();
        current_pixel = 0;
+    } else {
+     // annoy me at the start
+      for(int i=0; i< strip.numPixels(); i++) {
+          strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + rainbow_counter) & 255));
+      }
+      rainbow_counter++;
+      strip.show();
+      delay(20);      
     }
   }
   
@@ -125,7 +157,6 @@ void loop(){
       } else {
          state=START;
         Serial.println("Time's up, Back to Concentrating");
-        colorWipe(strip.Color(255, 255, 255), 50);
       }
   } else {
     Serial.println("Not suppose to be here");
